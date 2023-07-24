@@ -1,0 +1,14 @@
+[package]
+name = "base16384"
+version = "0.1.0"
+edition = "2021"
+authors = ["忘忧北萱草 <wybxc@qq.com>"]
+description = "Encode binary file to printable utf16be, and vice versa."
+license = "GPL-3.0"
+
+[dependencies]
+
+[features]
+default = ["std"]
+alloc = []
+std = []

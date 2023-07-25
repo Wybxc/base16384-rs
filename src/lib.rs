@@ -8,7 +8,10 @@ extern crate alloc;
 extern crate std as alloc;
 
 pub mod error;
+pub mod utf8;
 pub mod utils;
+
+pub use utf8::Base16384Utf8;
 
 use error::Base16384DecodeError;
 
@@ -191,18 +194,18 @@ impl Base16384 {
         let capacity = Self::decode_len(data.len(), padding);
         let mut result = alloc::vec::Vec::with_capacity(capacity);
 
-        let (data, remainder) = if let Some(padding) = padding {
-            let (data, remainder) = data.split_at(
-                data.len()
-                    - match padding - Self::PADDING_OFFSET {
-                        0 => 1,
-                        1 => 2,
-                        2 | 3 => 3,
-                        4 | 5 => 4,
-                        6 => 5,
-                        _ => unreachable!(),
-                    },
-            );
+        let padding_size = padding.map(|padding| padding - Self::PADDING_OFFSET);
+        let last_chunk_size = padding_size.map(|padding_size| match padding_size {
+            0 => 1,
+            1 => 2,
+            2 | 3 => 3,
+            4 | 5 => 4,
+            6 => 5,
+            _ => unreachable!(),
+        });
+
+        let (data, remainder) = if let Some(last_chunk_size) = last_chunk_size {
+            let (data, remainder) = data.split_at(data.len() - last_chunk_size);
             (data, &remainder[..remainder.len() - 1])
         } else {
             (data, &[][..])
@@ -218,9 +221,9 @@ impl Base16384 {
             let mut buf = [0u8; 7];
             result.extend_from_slice(Self::decode_chunk(chunk, &mut buf)?);
         }
-        if let Some(padding) = padding {
+        if let Some(padding_size) = padding_size {
             let mut buf = [0u8; 7];
-            result.extend_from_slice(Self::decode_remainder(remainder, &mut buf, padding)?);
+            result.extend_from_slice(Self::decode_remainder(remainder, &mut buf, padding_size)?);
         }
         Ok(result)
     }
@@ -247,18 +250,18 @@ impl Base16384 {
         let capacity = Self::decode_len(data.len(), padding);
         assert!(buf.len() >= capacity);
 
-        let (data, remainder) = if let Some(padding) = padding {
-            let (data, remainder) = data.split_at(
-                data.len()
-                    - match padding - Self::PADDING_OFFSET {
-                        0 => 1,
-                        1 => 2,
-                        2 | 3 => 3,
-                        4 | 5 => 4,
-                        6 => 5,
-                        _ => unreachable!(),
-                    },
-            );
+        let padding_size = padding.map(|padding| padding - Self::PADDING_OFFSET);
+        let last_chunk_size = padding_size.map(|padding_size| match padding_size {
+            0 => 1,
+            1 => 2,
+            2 | 3 => 3,
+            4 | 5 => 4,
+            6 => 5,
+            _ => unreachable!(),
+        });
+
+        let (data, remainder) = if let Some(last_chunk_size) = last_chunk_size {
+            let (data, remainder) = data.split_at(data.len() - last_chunk_size);
             (data, &remainder[..remainder.len() - 1])
         } else {
             (data, &[][..])
@@ -277,9 +280,9 @@ impl Base16384 {
             buf[i..i + 7].copy_from_slice(decoded);
             i += 7;
         }
-        if let Some(padding) = padding {
+        if let Some(padding_size) = padding_size {
             let mut tmp = [0u8; 7];
-            let decoded = Self::decode_remainder(remainder, &mut tmp, padding)?;
+            let decoded = Self::decode_remainder(remainder, &mut tmp, padding_size)?;
             buf[i..i + decoded.len()].copy_from_slice(decoded);
             i += decoded.len();
         }
@@ -319,11 +322,11 @@ impl Base16384 {
     fn decode_remainder<'a>(
         remainder: &[u16],
         buf: &'a mut [u8; 7],
-        padding: u16,
+        padding_size: u16,
     ) -> Result<&'a [u8], Base16384DecodeError> {
         let mut chunk = [Self::START; 4];
         chunk[..remainder.len()].copy_from_slice(remainder);
         Self::decode_chunk(&chunk, buf)?;
-        Ok(&buf[..(padding - Self::PADDING_OFFSET) as usize])
+        Ok(&buf[..padding_size as usize])
     }
 }

@@ -10,43 +10,53 @@
     };
 
     flake-utils.url = "github:numtide/flake-utils";
+
+    crane = {
+      url = "github:ipetkov/crane";
+      inputs = {
+        flake-utils.follows = "flake-utils";
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
   };
 
-  outputs = { self, nixpkgs, fenix, flake-utils, ... }:
+  outputs = { self, nixpkgs, fenix, flake-utils, crane, ... }:
     let
-      inherit (nixpkgs.lib) genAttrs importTOML optionals cleanSource;
-      inherit ((importTOML ./Cargo.toml).package) version;
+      inherit (nixpkgs.lib) optionals;
     in
     flake-utils.lib.eachDefaultSystem (system:
       let
         fenixPkgs = fenix.packages.${system};
         pkgs = nixpkgs.legacyPackages.${system};
 
-        toolchain = fenixPkgs.minimal.toolchain;
-        rustPlatform = pkgs.makeRustPlatform {
-          cargo = toolchain;
-          rustc = toolchain;
+        toolchain = fenixPkgs.stable.withComponents [
+          "cargo"
+          "clippy"
+          "rustc"
+        ];
+        craneLib = crane.lib.${system}.overrideToolchain toolchain;
+      in
+      let
+        commonArgs = {
+          src = craneLib.cleanCargoSource (craneLib.path ./.);
+          buildInputs = [ ] ++ optionals pkgs.stdenv.isDarwin [
+            pkgs.libiconv
+          ];
         };
+        cargoArtifacts = craneLib.buildDepsOnly (commonArgs // {
+          pname = "base16384-deps";
+        });
+        cargoClippy = craneLib.cargoClippy (commonArgs // {
+          inherit cargoArtifacts;
+          cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+        });
+        cargoPackage = craneLib.buildPackage (commonArgs // {
+          inherit cargoArtifacts;
+        });
       in
       rec {
-        packages.default = rustPlatform.buildRustPackage {
-          pname = "base16384";
-          inherit version;
-
-          src = cleanSource ./.;
-
-          cargoLock.lockFile = ./Cargo.lock;
-
-          nativeBuildInputs = [
-            pkgs.installShellFiles
-          ];
-
-          buildInputs = optionals pkgs.stdenv.isDarwin [
-            pkgs.darwin.apple_sdk.frameworks.CoreServices
-          ];
-        };
-
-        checks.default = packages.default;
+        packages.default = cargoPackage;
+        checks = { inherit cargoPackage cargoClippy; };
 
         devShells.default = pkgs.mkShell {
           packages = [

@@ -5,6 +5,8 @@ edition = "2021"
 authors = ["忘忧北萱草 <wybxc@qq.com>"]
 description = "Encode binary file to printable utf16be, and vice versa."
 license = "GPL-3.0"
+repository = "https://github.com/Wybxc/base16384-rs"
+rust-version = "1.60"
 
 [dependencies]
 

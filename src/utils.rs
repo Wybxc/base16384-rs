@@ -6,7 +6,7 @@
 ///
 /// # Safety
 /// N must be non-zero.
-/// 
+///
 /// # Examples
 ///
 /// ```
@@ -26,16 +26,16 @@ pub unsafe fn slice_as_chunks<T, const N: usize>(arr: &[T]) -> (&[[T; N]], &[T])
 
 /// Splits the slice into a slice of `N`-element arrays,
 /// starting at the beginning of the slice.
-/// 
+///
 /// This a port of the unstable `slice_as_chunks` feature.
-/// 
+///
 /// # Safety
 /// N must be non-zero and the length of the slice must be a multiple of `N`.
-/// 
+///
 /// # Examples
 /// ```
 /// use base16384::utils::slice_as_chunks_exact;
-/// 
+///
 /// let slice = ['l', 'o', 'r', 'e'];
 /// let chunks = unsafe { slice_as_chunks_exact(&slice) };
 /// assert_eq!(chunks, &[['l', 'o'], ['r', 'e']]);

@@ -1,11 +1,24 @@
-use crate::utils;
-use crate::Base16384;
-pub struct Base16384Utf8;
+//! UTF-8 encoding and decoding for Base16384.
+
 use crate::error::Base16384DecodeError;
+use crate::utils;
 use crate::utils::slice_as_chunks_exact;
+use crate::Base16384;
+
+/// UTF-8 encoding and decoding for Base16384.
+pub struct Base16384Utf8;
 
 impl Base16384Utf8 {
-    /// Returns the minimum number of bytes needed to encode a `data_len`-byte
+    /// Returns the minimum number of bytes needed to encode a `data_len`-byte.
+    ///
+    /// # Examples
+    /// ```
+    /// use base16384::Base16384Utf8;
+    ///
+    /// let data = b"12345678";
+    /// let encoded_len = Base16384Utf8::encode_len(data.len());
+    /// assert_eq!(encoded_len, 18);
+    /// ```
     #[inline]
     pub const fn encode_len(data_len: usize) -> usize {
         Base16384::encode_len(data_len) * 3
@@ -65,7 +78,7 @@ impl Base16384Utf8 {
     /// Encodes the given data as Base16384 into the given buffer.
     ///
     /// # Panics
-    /// Panics if the buffer is too small. Use [`Base16384::encode_len`] to get the required capacity.
+    /// Panics if the buffer is too small. Use [`Base16384Utf8::encode_len`] to get the required capacity.
     ///
     /// # Examples
     /// ```
@@ -146,6 +159,16 @@ impl Base16384Utf8 {
     /// # Panics
     /// Panics if the given offset is out of the Base16384 padding code points range
     /// (see [`Base16384::PADDING_OFFSET`]).
+    ///
+    /// # Examples
+    /// ```
+    /// use base16384::Base16384Utf8;
+    ///
+    /// let data = "婌焳廔萷尀㴁";
+    /// let padding = Base16384Utf8::padding(data.as_bytes()[data.len() - 3..].try_into().unwrap());
+    /// let decoded_len = Base16384Utf8::decode_len(data.len(), padding);
+    /// assert_eq!(decoded_len, 8);
+    /// ```
     #[inline]
     pub fn decode_len(data_len: usize, padding: Option<u16>) -> usize {
         assert!(data_len % 3 == 0, "data_len must be a multiple of 3");
@@ -153,6 +176,19 @@ impl Base16384Utf8 {
     }
 
     /// Gets the padding code point of the last chunk (if exists).
+    ///
+    /// # Examples
+    /// ```
+    /// use base16384::Base16384Utf8;
+    ///
+    /// let data = "婌焳廔萷尀㴁";
+    /// let padding = Base16384Utf8::padding(data.as_bytes()[data.len() - 3..].try_into().unwrap());
+    /// assert_eq!(padding, Some(0x3d01));
+    ///
+    /// let data = "婌焳廔萷";
+    /// let padding = Base16384Utf8::padding(data.as_bytes()[data.len() - 3..].try_into().unwrap());
+    /// assert_eq!(padding, None);
+    /// ```
     #[inline]
     pub fn padding(last: [u8; 3]) -> Option<u16> {
         if last[0] & 0xF0 != 0xE0 || last[1] & 0xC0 != 0x80 || last[2] & 0xC0 != 0x80 {
@@ -226,10 +262,10 @@ impl Base16384Utf8 {
         Ok(result)
     }
 
-    /// Decodes the given Base16384 data into the given buffer.
+    /// Decodes the given utf8 data as Base16384 into the given buffer.
     ///
     /// # Panics
-    /// Panics if the buffer is too small. Use [`Base16384::decode_len`] to get the required capacity.
+    /// Panics if the buffer is too small. Use [`Base16384Utf8::decode_len`] to get the required capacity.
     ///
     /// # Examples
     /// ```

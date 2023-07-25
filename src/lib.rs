@@ -1,5 +1,25 @@
-//! Encode binary files to printable utf16
-
+//! Encode binary files to printable utf16.
+//!
+//! See [`Base16384`] and [`Base16384Utf8`] for more details.
+//!
+//! # Examples
+//! ```
+//! use base16384::Base16384;
+//!
+//! let data = b"12345678";
+//! let encoded = Base16384::encode(data);
+//! let text = String::from_utf16(&encoded).unwrap();
+//! assert_eq!(text, "婌焳廔萷尀㴁");
+//! ```
+//!
+//! ```
+//! use base16384::Base16384;
+//!
+//! let data = "婌焳廔萷尀㴁".encode_utf16().collect::<Vec<_>>();
+//! let decoded = Base16384::decode(&data).unwrap();
+//! assert_eq!(decoded, b"12345678");
+//! ```
+#![deny(missing_docs)]
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
 
 #[cfg(all(feature = "alloc", not(any(feature = "std", test))))]
@@ -15,10 +35,20 @@ pub use utf8::Base16384Utf8;
 
 use error::Base16384DecodeError;
 
+/// Base16384 encoding and decoding.
 pub struct Base16384;
 
 impl Base16384 {
     /// Returns the minimum number of u16s needed to encode the given number of bytes.
+    ///
+    /// # Examples
+    /// ```
+    /// use base16384::Base16384;
+    ///
+    /// let data = b"12345678";
+    /// let len = Base16384::encode_len(data.len());
+    /// assert_eq!(len, 6);
+    /// ```
     #[inline]
     pub const fn encode_len(data_len: usize) -> usize {
         let n = data_len / 7 * 4;
@@ -148,6 +178,16 @@ impl Base16384 {
     /// # Panics
     /// Panics if the given offset is out of the Base16384 padding code points range
     /// (see [`Base16384::PADDING_OFFSET`]).
+    ///
+    /// # Examples
+    /// ```
+    /// use base16384::Base16384;
+    ///
+    /// let data = "婌焳廔萷尀㴁".encode_utf16().collect::<Vec<_>>();
+    /// let padding = Base16384::padding(data.last().cloned().unwrap());
+    /// let len = Base16384::decode_len(data.len(), padding);
+    /// assert_eq!(len, 8);
+    /// ```
     #[inline]
     pub fn decode_len(mut data_len: usize, padding: Option<u16>) -> usize {
         let r = if let Some(offset) = padding {
@@ -169,6 +209,19 @@ impl Base16384 {
     }
 
     /// Gets the padding code point of the last chunk (if exists).
+    ///
+    /// # Examples
+    /// ```
+    /// use base16384::Base16384;
+    ///
+    /// let data = "婌焳廔萷尀㴁".encode_utf16().collect::<Vec<_>>();
+    /// let padding = Base16384::padding(data.last().cloned().unwrap());
+    /// assert_eq!(padding, Some(0x3d01));
+    ///
+    /// let data = "婌焳廔萷".encode_utf16().collect::<Vec<_>>();
+    /// let padding = Base16384::padding(data.last().cloned().unwrap());
+    /// assert_eq!(padding, None);
+    /// ```
     #[inline]
     pub fn padding(last: u16) -> Option<u16> {
         if (Self::PADDING_OFFSET..Self::PADDING_OFFSET + 7).contains(&last) {

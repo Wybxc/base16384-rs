@@ -1,3 +1,5 @@
+//! Utility functions for the crate.
+
 /// Splits the slice into a slice of `N`-element arrays,
 /// starting at the beginning of the slice,
 /// and a remainder slice with length strictly less than `N`.

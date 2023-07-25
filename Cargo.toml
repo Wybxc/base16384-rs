@@ -7,6 +7,8 @@ description = "Encode binary file to printable utf16be, and vice versa."
 license = "GPL-3.0"
 repository = "https://github.com/Wybxc/base16384-rs"
 rust-version = "1.60"
+readme = "README.md"
+exclude = ["Cargo.lock", "flake.nix", "flake.lock", ".github/"]
 
 [dependencies]
 
